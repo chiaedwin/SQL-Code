@@ -59,7 +59,7 @@ WHERE Continent IS NOT NULL
 GROUP BY continent
 ORDER BY TotalDeathCount DESC
 
---Global Numbers
+--GLOBAL NUMBERS
 SELECT date, SUM(new_cases), SUM(cast(new_deaths as INT)), SUM(cast(New_deaths as float))/SUM(new_cases)*100 as DeathPercentage
 FROM PortfolioProject..CovidDeaths
 --WHERE location like '%states%'
@@ -88,6 +88,14 @@ FROM PortfolioProject..CovidDeaths
 --WHERE location like '%states%'
 WHERE continent IS NOT NULL
 --GROUP BY Date
+ORDER BY 1,2
+
+SELECT SUM(new_cases) as total_cases, SUM(cast(new_deaths as int)) as total_deaths, SUM(cast
+	(new_deaths as int))/SUM(New_Cases)*100 as DeathPercentage
+FROM PortfolioProject..CovidDeaths
+--WHERE location like '%States%'
+WHERE continent IS NOT NULL
+--GROUP BY date
 ORDER BY 1,2
 
 --JOINING tables on location and date
@@ -143,3 +151,44 @@ WHERE dea.continent IS NOT NULL
 )
 Select *, (RollingPeopleVaccinated/Population)*100
 FROM PopvsVac
+
+
+--TEMP TABLE
+DROP Table if exists #PercentPopulationVaccinated
+CREATE Table #PercentPopulationVaccinated
+(
+Continent nvarchar(255),
+Location nvarchar(255),
+Date datetime,
+Population numeric,
+New_vaccinations numeric,
+RollingPeopleVaccinated numeric
+)
+INSERT INTO #PercentPopulationVaccinated
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+	SUM(CONVERT(int,vac.new_vaccinations)) OVER (PARTITION BY dea.location ORDER BY dea.location,
+	dea.date) as RollingPeopleVaccinated
+FROM PortfolioProject..CovidDeaths dea
+JOIN PortfolioProject..CovidVaccinations vac
+	on dea.location = vac.location
+	and dea.date = vac.date
+--WHERE dea.continent IS NOT NULL
+--ORDER BY 2,3
+Select *, (RollingPeopleVaccinated/Population)*100
+FROM #PercentPopulationVaccinated
+
+
+--CREATING VIEW TO STORE DATA FOR LATER VISUALIZATIONS
+CREATE VIEW PercentPopulationVaccinated as
+SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+	SUM(CONVERT(int,vac.new_vaccinations)) OVER (PARTITION BY dea.location ORDER BY dea.location,
+	dea.date) as RollingPeopleVaccinated
+FROM PortfolioProject..CovidDeaths dea
+JOIN PortfolioProject..CovidVaccinations vac
+	on dea.location = vac.location
+	and dea.date = vac.date
+--WHERE dea.continent IS NOT NULL
+--ORDER BY 2,3
+
+SELECT *
+FROM PercentPopulationVaccinated
